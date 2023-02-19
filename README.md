@@ -23,12 +23,14 @@ To install keyboard software, run this script
 ```
 ./install.sh
 ```
+Reboot your phone.
 
 ### Removal
 If you want to remove the installed software, run this script
 ```
 ./uninstall.sh
 ```
+Reboot Your phone.
 
 ### Further keyboard configuration
 I use Key Mapper from Fdroid to remap the red side key to CTRL. Doing this with keylayout files doesn't work since android doesn't let the two keyboards interact. Remapping this with uinput-titan also doesn't work for a number of reasons.
@@ -38,6 +40,7 @@ This sets the display timeout to 5 minutes, scales down the display, and changes
 ```
 ./configure.sh
 ```
+Reboot your phone.
 
 #### Functionalities
 
