@@ -1,9 +1,6 @@
 ## references
 - titan tips: https://unihertz-titan.neocities.org
 - discord with a ton information: https://discord.gg/PxnUeM8
-- https://github.com/phhusson/unihertz_titan
-- phhusson gsi: https://github.com/phhusson/treble_experimentations
-- internal pictures: https://fccid.io/2AK6CTITAN/Internal-Photos/internal-Photos-4474419
 
 ## Install
 
@@ -41,7 +38,6 @@ This sets the display timeout to 5 minutes, scales down the display, and changes
 ```
 ./configure.sh
 ```
-
 
 #### Functionalities
 
