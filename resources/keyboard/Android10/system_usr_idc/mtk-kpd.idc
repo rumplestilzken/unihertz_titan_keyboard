@@ -20,7 +20,7 @@ touch.deviceType = touchScreen
 touch.orientationAware = 1
 
 keyboard.layout = mtk-kpd
-keyboard.characterMap = aw9523-key
+keyboard.characterMap = qwerty
 keyboard.orientationAware = 1
 keyboard.builtIn = 0
 
