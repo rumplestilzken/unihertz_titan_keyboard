@@ -1,5 +1,5 @@
 adb root
-adb remount
+adb remount # This may require a reboot
 adb shell mount -o remount,rw /
 adb push resources/keyboard/Android10_function/system_usr_idc/* /system/usr/idc/
 adb push resources/keyboard/Android10_function/system_usr_keychars/* /system/usr/keychars/
