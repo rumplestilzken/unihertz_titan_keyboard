@@ -38,7 +38,8 @@ uint64_t now() {
 
 static uint64_t lastKbdTimestamp;
 
-
+static int screen_width = 0;
+static int screen_height = 0;
 
 static void insertEvent(int fd, int type, int code, int value) {
     struct input_event out_e;
@@ -71,10 +72,12 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 2880,
+                    //.maximum = 2880,
+                    .maximum = screen_width*screen_height,
                     .fuzz = 0,
                     .flat = 0,
-                    .resolution = 2880,
+                    //.resolution = 2880,
+                    .resolution = screen_width*screen_height,
                     },
     };
     ioctl(fd, UI_ABS_SETUP, abs_setup_x);
@@ -85,10 +88,12 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 1440,
+                    //.maximum = 1440,
+                    .maximum = screen_height,
                     .fuzz = 0,
                     .flat = 0,
-                    .resolution = 1440,
+                    //.resolution = 1440,
+                    .resolution = screen_height,
                     },
     };
     ioctl(fd, UI_ABS_SETUP, abs_setup_y);
@@ -137,7 +142,8 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 2880,
+                    //.maximum = 2880,
+                    .maximum = screen_width*screen_height,
                     .fuzz = 0,
                     .flat = 0,
                     .resolution = 0,
@@ -151,7 +157,8 @@ static int uinput_init() {
         .absinfo = {
                     .value = 0,
                     .minimum = 0,
-                    .maximum = 1440,
+                    //.maximum = 1440,
+                    .maximum = screen_height,
                     .fuzz = 0,
                     .flat = 0,
                     .resolution = 0,
@@ -870,6 +877,79 @@ int main() {
     LOGI("start\n");
     int ufd = uinput_init();
     int origfd = original_input_init();
+
+    FILE * fp;
+    char path[1035];
+
+    fp = popen("su -c dumpsys display | grep mBaseDisplayInfo", "r");
+    if(fp == NULL)
+    {
+        LOGI("Failed to read display information.");
+        exit(1);
+    }
+
+    char output[2000] = "";
+    char output2[2000] = "";
+    const char token[] = ",";
+
+    /* Read the output a line at a time - output it. */
+    while (fgets(path, sizeof(path), fp) != NULL) {
+        strcat(output, path);
+    }
+
+    /* close */
+    pclose(fp);
+
+    LOGI(output);
+
+    strcpy(output2, output);
+
+    char* str = strtok(output2, token);
+    char value[100];
+    while (str != NULL) {
+        if(strstr(str, "real"))
+        {
+            //value = str;
+            strcpy(value,str);
+            break;
+        }
+        LOGI(" %s\n", str);
+        str = strtok(NULL, token);
+    }
+
+    char sub[100];
+    int c = 0;
+    int len = *(&value+1)-value;
+    while (c < len) {
+      sub[c] = value[7+c-1];
+      c++;
+    }
+
+    char width[5], height[5];
+    int count = 0;
+    char* ptr = strtok(sub, "x");
+    do{
+        //LOGI("LOG:%s",ptr);
+        if(count == 0)
+        {
+            strcpy(width,ptr);
+            screen_width = atoi(width);
+        }
+        else
+        {
+            strcpy(height,ptr);
+            screen_height = atoi(height);
+        }
+        count++;
+    }
+    while(ptr = strtok(NULL, "x "));
+
+    //LOGI("'%s'", value);
+    //LOGI("'%s'", sub);
+    //LOGI("Width:'%s'", width);
+    //LOGI("Height:%s'", height);
+    LOGI("Screen Width Detected:'%d'", screen_width);
+    LOGI("Screen Height Detected:'%d'", screen_height);
 
     LOGI("keyboard thread\n");
     pthread_t keyboard_monitor_thread;
