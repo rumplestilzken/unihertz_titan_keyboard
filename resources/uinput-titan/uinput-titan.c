@@ -38,8 +38,16 @@ uint64_t now() {
 
 static uint64_t lastKbdTimestamp;
 
+typedef enum device_type {
+    NOTSET,
+    TITAN,
+    POCKET,
+    SLIM
+} device_type;
+
 static int screen_width = 0;
 static int screen_height = 0;
+static device_type dev = NOTSET;
 
 static void insertEvent(int fd, int type, int code, int value) {
     struct input_event out_e;
@@ -73,11 +81,11 @@ static int uinput_init() {
                     .value = 0,
                     .minimum = 0,
                     //.maximum = 2880,
-                    .maximum = screen_width*screen_height,
+                    .maximum = screen_width,
                     .fuzz = 0,
                     .flat = 0,
                     //.resolution = 2880,
-                    .resolution = screen_width*screen_height,
+                    .resolution = screen_width,
                     },
     };
     ioctl(fd, UI_ABS_SETUP, abs_setup_x);
@@ -143,7 +151,7 @@ static int uinput_init() {
                     .value = 0,
                     .minimum = 0,
                     //.maximum = 2880,
-                    .maximum = screen_width*screen_height,
+                    .maximum = screen_width,
                     .fuzz = 0,
                     .flat = 0,
                     .resolution = 0,
@@ -872,15 +880,12 @@ void *keyboard_monitor(void* ptr) {
     return NULL;
 }
 
-
-int main() {
-    LOGI("start\n");
-    int ufd = uinput_init();
-    int origfd = original_input_init();
-
+bool parseScreenDimensionInformation(){
     FILE * fp;
     char path[1035];
 
+    //Execute command to get dump of screen information
+    //Slim:   mBaseDisplayInfo=DisplayInfo{"Built-in Screen", displayId 0", displayGroupId 0, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, FLAG_TRUSTED, real 768 x 1280, largest app 768 x 1280, smallest app 768 x 1280, appVsyncOff 8300000, presDeadline 9366667, mode 1, defaultMode 1, modes [{id=1, width=768, height=1280, fps=60.0, alternativeRefreshRates=[]}], hdrCapabilities HdrCapabilities{mSupportedHdrTypes=[], mMaxLuminance=500.0, mMaxAverageLuminance=500.0, mMinLuminance=0.0}, userDisabledHdrTypes [], minimalPostProcessingSupported false, rotation 0, state ON, type INTERNAL, uniqueId "local:0", app 768 x 1280, density 320 (375.138 x 349.591) dpi, layerStack 0, colorMode 0, supportedColorModes [0], address {port=0}, deviceProductInfo null, removeMode 0, refreshRateOverride 0.0, brightnessMinimum 0.0, brightnessMaximum 1.0, brightnessDefault 0.4, installOrientation ROTATION_0}
     fp = popen("su -c dumpsys display | grep mBaseDisplayInfo", "r");
     if(fp == NULL)
     {
@@ -891,7 +896,7 @@ int main() {
     char output[2000] = "";
     char output2[2000] = "";
     const char token[] = ",";
-
+    //Get output from fp and concatnate it into output
     /* Read the output a line at a time - output it. */
     while (fgets(path, sizeof(path), fp) != NULL) {
         strcat(output, path);
@@ -900,23 +905,27 @@ int main() {
     /* close */
     pclose(fp);
 
+    //Log Output
     LOGI(output);
 
+    //Copy for manipulation
     strcpy(output2, output);
 
+    //Pull " real 768 x 1280" from output2
     char* str = strtok(output2, token);
     char value[100];
     while (str != NULL) {
+        LOGI(" %s\n", str);
         if(strstr(str, "real"))
         {
             //value = str;
             strcpy(value,str);
             break;
         }
-        LOGI(" %s\n", str);
         str = strtok(NULL, token);
     }
 
+    //Strip value down to dimensions
     char sub[100];
     int c = 0;
     int len = *(&value+1)-value;
@@ -925,6 +934,7 @@ int main() {
       c++;
     }
 
+    //Parse Dimensions into screen_width and screen_height
     char width[5], height[5];
     int count = 0;
     char* ptr = strtok(sub, "x");
@@ -950,6 +960,51 @@ int main() {
     //LOGI("Height:%s'", height);
     LOGI("Screen Width Detected:'%d'", screen_width);
     LOGI("Screen Height Detected:'%d'", screen_height);
+
+    if(screen_width == 0 || screen_height == 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+device_type getDeviceType() {
+    device_type device = NOTSET;
+    if(screen_height == 1440 && screen_width == 1440)
+    {
+        device = TITAN;
+    }
+    else if (screen_height == 1280 && screen_width == 768)
+    {
+        device = SLIM;
+    }
+    else if (screen_height == 720 && screen_width == 720)
+    {
+        device = POCKET;
+    }
+    return device;
+}
+
+int main() {
+    LOGI("start\n");
+
+    bool gotScreenDimensions = parseScreenDimensionInformation();
+    if(!gotScreenDimensions)
+    {
+        LOGE("Could not parse display dimensions.");
+        exit(1);
+    }
+
+    device_type device = getDeviceType();
+    if(device == NOTSET)
+    {
+        LOGE("Device could not be detected.");
+        exit(1);
+    }
+
+    int ufd = uinput_init();
+    int origfd = original_input_init();
 
     LOGI("keyboard thread\n");
     pthread_t keyboard_monitor_thread;
