@@ -1003,6 +1003,8 @@ int main() {
         exit(1);
     }
 
+    dev = device;
+
     int ufd = uinput_init();
     int origfd = original_input_init();
 
